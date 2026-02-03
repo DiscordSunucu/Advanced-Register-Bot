@@ -17,13 +17,13 @@ module.exports = {
             // Get guild config
             const guildConfig = await db.getGuildConfig(member.guild_id);
             if (!guildConfig) {
-                console.log(`[EVENT] No config found for guild ${member.guild_id}`);
+                // Silent return for unconfigured guilds to reduce log spam
                 return;
             }
 
             // Check if welcome channel is set
             if (!guildConfig.channels?.welcome) {
-                console.log(`[EVENT] No welcome channel set for guild ${member.guild_id}`);
+                // Silent return if channel not set
                 return;
             }
 
@@ -46,7 +46,12 @@ module.exports = {
                     await client.request('PUT', `/guilds/${member.guild_id}/members/${member.user.id}/roles/${guildConfig.roles.kayitsiz}`);
                     console.log(`[EVENT] Assigned kayıtsız role to ${member.user.username}`);
                 } catch (roleError) {
-                    console.error(`[EVENT] Failed to assign kayıtsız role:`, roleError.message);
+                    // Ignore Unknown Member (10007) - happens if user leaves quickly
+                    if (roleError.code === 10007 || (roleError.error && roleError.error.code === 10007)) {
+                        console.log(`[EVENT] Skipped role assignment: Member ${member.user.username} left.`);
+                    } else {
+                        console.error(`[EVENT] Failed to assign kayıtsız role:`, roleError.message);
+                    }
                 }
             }
 

@@ -135,14 +135,22 @@ async function handleButton(interaction, client) {
     // Setup: Save
     else if (customId === 'setup_save') {
         const guildConfig = await db.getGuildConfig(guildId);
-        if (guildConfig) {
+
+        // Check critical config: Welcome Channel
+        const hasWelcome = guildConfig?.channels?.welcome;
+        const hasRoles = guildConfig?.roles?.kayitsiz || guildConfig?.roles?.kayitli;
+
+        if (hasWelcome) {
+            let statusMsg = "✅ **Ayarlar kaydedildi!**\nBot artık kullanıma hazır.";
+            if (!hasRoles) statusMsg += "\n⚠️ *Uyarı: Rol ayarları eksik, sadece hoşgeldin mesajı atılacak.*";
+
             await interaction.reply({
-                content: "✅ **Ayarlar kaydedildi!**\n\nBot artık kullanıma hazır. Yeni üyeler katıldığında hoşgeldin kanalına otomatik mesaj gönderilecek.",
+                content: statusMsg,
                 flags: 64
             });
         } else {
             await interaction.reply({
-                content: "❌ Henüz hiçbir ayar yapılmamış!",
+                content: "❌ **Eksik Ayar:** Lütfen en azından bir **Hoşgeldin Kanalı** seçin!",
                 flags: 64
             });
         }
@@ -208,11 +216,11 @@ async function handleSelectMenu(interaction, client) {
 
     switch (customId) {
         case 'select_welcome_channel':
-            await db.updateGuildConfig(guildId, 'welcome_channel', value);
+            await updateChannel(guildId, 'welcome', value);
             displayName = 'Hoşgeldin Kanalı';
             break;
         case 'select_log_channel':
-            await db.updateGuildConfig(guildId, 'log_channel', value);
+            await updateChannel(guildId, 'log', value);
             displayName = 'Log Kanalı';
             break;
         case 'select_yetkili_role':
@@ -239,13 +247,23 @@ async function handleSelectMenu(interaction, client) {
 }
 
 /**
- * Update role in config
+ * Update role in config (Nested under roles)
  */
 async function updateRole(guildId, roleType, roleId) {
     const config = await db.getGuildConfig(guildId) || {};
     const roles = config.roles || {};
     roles[roleType] = roleId;
     await db.updateGuildConfig(guildId, 'roles', roles);
+}
+
+/**
+ * Update channel in config (Nested under channels)
+ */
+async function updateChannel(guildId, channelType, channelId) {
+    const config = await db.getGuildConfig(guildId) || {};
+    const channels = config.channels || {};
+    channels[channelType] = channelId;
+    await db.updateGuildConfig(guildId, 'channels', channels);
 }
 
 /**
